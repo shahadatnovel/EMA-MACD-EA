@@ -1,0 +1,87 @@
+//+------------------------------------------------------------------+
+//| Expert Advisor based on EMA, MACD, and Candlestick Conditions   |
+//+------------------------------------------------------------------+
+#property strict
+
+input double  StopLossPoints = 20;            
+input double TP_Multiplier = 4.15;         
+input int TimeFrameMinutes = 15;        
+datetime lastTradeTime = 0;               
+int stopLossHitCount = 0;                  
+int maxStopLossesAllowed = 2;
+double MagicNumber = 1234;
+input double lot = 0.03;
+              
+
+double PointMultiplier;
+
+//+------------------------------------------------------------------+
+//| Initialization function                                         |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   PointMultiplier = MarketInfo(Symbol(), MODE_POINT);
+   return(INIT_SUCCEEDED);
+  }
+
+//+------------------------------------------------------------------+
+//| Main trading function                                           |
+//+------------------------------------------------------------------+
+void OnTick()
+  {
+   static datetime lastTradeWindowStart = 0;
+   datetime currentBarTime = iTime(NULL, TimeFrameMinutes, 0);
+
+// Reset stop-loss counter every 4 hours
+   if(TimeCurrent() - lastTradeWindowStart >= 14400)
+     {
+      stopLossHitCount = 0;
+      lastTradeWindowStart = TimeCurrent();
+     }
+
+
+   if(TimeCurrent() - lastTradeTime < 14400 && stopLossHitCount == 0)
+     {
+      return;
+     }
+
+
+   double ema10 = iMA(NULL, TimeFrameMinutes, 10, 0, MODE_EMA, PRICE_CLOSE, 0);
+   double ema20 = iMA(NULL, TimeFrameMinutes, 20, 0, MODE_EMA, PRICE_CLOSE, 0);
+   double macdMain = iMACD(NULL, TimeFrameMinutes, 12, 26, 9, PRICE_CLOSE, MODE_MAIN, 0);
+   if(OrdersHistoryTotal()==0)
+     {
+
+      if(ema10 <= ema20 || macdMain <= 0)
+        {
+         Print("buy signal");
+        }
+      else
+         if(ema10>= ema20 && macdMain>=0)
+           {
+            Print("Sell signal");
+           }
+     }
+
+
+   double prevClose = iClose(NULL, TimeFrameMinutes, 1);
+   double prevOpen = iOpen(NULL, TimeFrameMinutes, 1);
+   double currentClose = iClose(NULL, TimeFrameMinutes, 0);
+   double currentOpen = iOpen(NULL, TimeFrameMinutes, 0);
+
+   if(prevClose < prevOpen && currentClose > currentOpen)
+     {
+      double priceMovement = MathAbs(currentClose - prevClose) / PointMultiplier;
+      if(priceMovement < 400)
+        {
+        Print (currentClose);
+        }
+     }
+  }
+
+//+------------------------------------------------------------------+
+//| Function to place a trade                                       |
+//+------------------------------------------------------------------+
+
+
+//+------------------------------------------------------------------+
